@@ -14,8 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { font, space } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
 import { ExploreSheet } from './ExploreSheet';
-import { RecentSearchOverlay } from './RecentSearchOverlay';
-import { INITIAL_RECENTS, SEARCH_PLACEHOLDER } from './searchData';
+import { SEARCH_PLACEHOLDER } from './searchData';
 
 export default function SearchScreen() {
   const c = useTokens();
@@ -23,8 +22,6 @@ export default function SearchScreen() {
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
-  const [searching, setSearching] = useState(false);
-  const [recents, setRecents] = useState(INITIAL_RECENTS);
 
   // 0 = collapsed sheet, 1 = open. Drives sheet height, scrim + grid opacity.
   const progress = useRef(new Animated.Value(0)).current;
@@ -59,16 +56,8 @@ export default function SearchScreen() {
 
   const scrimOpacity = progress.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
 
-  const openSearch = () => {
-    animateSheet(false);
-    setSearching(true);
-  };
-
-  // Run a query: close the overlay and push the results screen within this tab.
-  const runQuery = (query: string) => {
-    setSearching(false);
-    router.push({ pathname: '/search/results', params: { q: query } });
-  };
+  // Tapping the hero field opens the recent/type search screen (a pushed route).
+  const openSearch = () => router.push('/search/query');
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
@@ -95,14 +84,6 @@ export default function SearchScreen() {
       </Animated.View>
 
       <ExploreSheet progress={progress} panHandlers={pan.panHandlers} open={open} />
-
-      <RecentSearchOverlay
-        visible={searching}
-        recents={recents}
-        onCancel={() => setSearching(false)}
-        onSubmit={runQuery}
-        onRemoveRecent={(i) => setRecents((r) => r.filter((_, j) => j !== i))}
-      />
     </View>
   );
 }
