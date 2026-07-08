@@ -13,6 +13,9 @@ export type ColorTokens = {
   tint: string;
   tintInk: string;
   soul: string;
+  /** Ink for text/icons on a soul-filled surface — dark in BOTH themes, since
+   * soul is always the pale yellow. Distinct from tintInk (which flips in dark). */
+  onSoul: string;
   error: string;
   /** Recessed surfaces below `bg` — bottom sheets, raised trays. */
   canvas: string;
@@ -20,6 +23,8 @@ export type ColorTokens = {
   field: string;
   /** Grab-handle / drag-affordance color (semi-transparent). */
   handle: string;
+  /** Frosted overlay fill for controls floating over imagery. */
+  glass: string;
 };
 
 export const light: ColorTokens = {
@@ -30,10 +35,12 @@ export const light: ColorTokens = {
   tint: '#FCF6E6',
   tintInk: '#3D2E0A',
   soul: '#F6E199',
+  onSoul: '#3D2E0A',
   error: '#D64545',
   canvas: '#EDEBE7',
   field: '#EEEBE6',
   handle: 'rgba(0,0,0,0.18)',
+  glass: 'rgba(255,255,255,0.72)',
 };
 
 export const dark: ColorTokens = {
@@ -44,10 +51,12 @@ export const dark: ColorTokens = {
   tint: '#362D14',
   tintInk: '#F6E199',
   soul: '#F6E199',
+  onSoul: '#3D2E0A',
   error: '#D64545',
   canvas: '#161616',
   field: '#242424',
   handle: 'rgba(255,255,255,0.28)',
+  glass: 'rgba(26,26,26,0.6)',
 };
 
 /** 4px base, strict scale. */

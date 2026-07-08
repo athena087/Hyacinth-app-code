@@ -3,10 +3,10 @@ import { TabList, TabSlot, TabTrigger, Tabs } from 'expo-router/ui';
 import { BottomNav, NavButton } from '../../components/BottomNav';
 
 /**
- * Tab navigator with a custom floating bar. Home, Search and Profile are real
- * routes (TabTriggers with hrefs); Basket renders as an inert button until its
- * screen exists. TabList `asChild` hands the triggers to our BottomNav pill;
- * TabTrigger `asChild` forwards focus + press to each NavButton.
+ * Tab navigator with a custom floating bar. All four tabs — Home, Search, Bag
+ * and Profile — are real routes (TabTriggers with hrefs). TabList `asChild`
+ * hands the triggers to our BottomNav pill; TabTrigger `asChild` forwards focus
+ * + press to each NavButton.
  */
 export default function TabsLayout() {
   return (
@@ -20,7 +20,9 @@ export default function TabsLayout() {
           <TabTrigger name="search" href="/search" asChild>
             <NavButton icon={MagnifyingGlass} />
           </TabTrigger>
-          <NavButton icon={Basket} />
+          <TabTrigger name="bag" href="/bag" asChild>
+            <NavButton icon={Basket} />
+          </TabTrigger>
           <TabTrigger name="profile" href="/profile" asChild>
             <NavButton icon={User} />
           </TabTrigger>
