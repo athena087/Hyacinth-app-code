@@ -1,4 +1,5 @@
 import { CaretLeft, ClockCounterClockwise, MagnifyingGlass, X } from 'phosphor-react-native';
+import { useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -16,23 +17,30 @@ import { SEARCH_PLACEHOLDER } from './searchData';
 /**
  * Full-screen search overlay shown when the hero search field is tapped.
  * Rendered in a Modal so it covers the tab bar (matching the mock's z-50
- * full-screen search mode). Text isn't wired to filtering yet — future work.
+ * full-screen search mode). Submitting the field or tapping a recent runs a
+ * query (onSubmit); the parent then navigates to the results.
  */
 export function RecentSearchOverlay({
   visible,
   recents,
   onCancel,
-  onSelectRecent,
+  onSubmit,
   onRemoveRecent,
 }: {
   visible: boolean;
   recents: string[];
   onCancel: () => void;
-  onSelectRecent: (text: string) => void;
+  onSubmit: (query: string) => void;
   onRemoveRecent: (index: number) => void;
 }) {
   const c = useTokens();
   const insets = useSafeAreaInsets();
+  const [text, setText] = useState('');
+
+  const submit = (query: string) => {
+    const trimmed = query.trim();
+    if (trimmed) onSubmit(trimmed);
+  };
 
   return (
     <Modal visible={visible} animationType="fade" onRequestClose={onCancel} transparent={false}>
@@ -45,6 +53,9 @@ export function RecentSearchOverlay({
             <MagnifyingGlass size={20} color={c.ink} style={{ opacity: 0.55 }} />
             <TextInput
               autoFocus
+              value={text}
+              onChangeText={setText}
+              onSubmitEditing={() => submit(text)}
               placeholder={SEARCH_PLACEHOLDER}
               placeholderTextColor={c.ink + '8C'} // ~0.55 alpha
               style={[styles.input, { color: c.ink }]}
@@ -59,15 +70,15 @@ export function RecentSearchOverlay({
           contentContainerStyle={{ paddingBottom: insets.bottom + space.xl }}
         >
           <Text style={[styles.sectionLabel, { color: c.ink }]}>RECENT</Text>
-          {recents.map((text, i) => (
+          {recents.map((recent, i) => (
             <Pressable
-              key={text}
-              onPress={() => onSelectRecent(text)}
+              key={recent}
+              onPress={() => submit(recent)}
               style={styles.recentRow}
             >
               <ClockCounterClockwise size={20} color={c.ink} style={{ opacity: 0.55 }} />
               <Text style={[styles.recentText, { color: c.ink }]} numberOfLines={1}>
-                {text}
+                {recent}
               </Text>
               <Pressable onPress={() => onRemoveRecent(i)} hitSlop={8} style={styles.remove}>
                 <X size={16} color={c.ink} style={{ opacity: 0.55 }} />

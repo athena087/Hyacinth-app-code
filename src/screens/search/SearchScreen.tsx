@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { MagnifyingGlass } from 'phosphor-react-native';
 import { useRef, useState } from 'react';
 import {
@@ -19,6 +20,7 @@ import { INITIAL_RECENTS, SEARCH_PLACEHOLDER } from './searchData';
 export default function SearchScreen() {
   const c = useTokens();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -62,6 +64,12 @@ export default function SearchScreen() {
     setSearching(true);
   };
 
+  // Run a query: close the overlay and push the results screen within this tab.
+  const runQuery = (query: string) => {
+    setSearching(false);
+    router.push({ pathname: '/search/results', params: { q: query } });
+  };
+
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
       {/* Hero */}
@@ -92,7 +100,7 @@ export default function SearchScreen() {
         visible={searching}
         recents={recents}
         onCancel={() => setSearching(false)}
-        onSelectRecent={() => setSearching(false)}
+        onSubmit={runQuery}
         onRemoveRecent={(i) => setRecents((r) => r.filter((_, j) => j !== i))}
       />
     </View>
