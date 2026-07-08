@@ -1,0 +1,102 @@
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { font, space, textOpacity } from '../../theme/tokens';
+import { useTokens } from '../../theme/useTokens';
+import { SavedListCard } from './SavedListCard';
+import { SAVED_LISTS } from './savedLists';
+
+// Placeholder until auth/user data exists.
+const USER_NAME = 'Athena';
+
+export default function ProfileScreen() {
+  const c = useTokens();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[styles.root, { backgroundColor: c.bg }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 122 }}
+      >
+        {/* Polaroid — always white paper, so its colors are fixed, not themed. */}
+        <View style={[styles.polaroidWrap, { paddingTop: insets.top + space.xxl }]}>
+          <View style={styles.polaroid}>
+            <View style={styles.photo}>
+              <Text style={styles.photoLabel}>Your photo</Text>
+            </View>
+            <Text style={styles.polaroidName}>{USER_NAME}</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.eyebrow, { color: c.ink }]}>SAVED LISTS</Text>
+          <View style={styles.list}>
+            {SAVED_LISTS.map((list) => (
+              <SavedListCard key={list.id} list={list} />
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  polaroidWrap: {
+    paddingHorizontal: space.xl,
+    paddingBottom: space.sm - 2,
+    alignItems: 'flex-start',
+  },
+  polaroid: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 16,
+    borderRadius: 3,
+    transform: [{ rotate: '-2.5deg' }],
+    // Deep paper-lift shadow from the mock.
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.18,
+    shadowRadius: 44,
+    elevation: 12,
+  },
+  photo: {
+    width: 214,
+    height: 258,
+    backgroundColor: '#E4E4E4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoLabel: {
+    fontFamily: font.regular,
+    fontSize: 14,
+    color: '#707070',
+  },
+  polaroidName: {
+    fontFamily: font.medium,
+    fontSize: 19,
+    letterSpacing: 0.01 * 19,
+    color: '#2A2A2A',
+    textAlign: 'center',
+    paddingTop: 16,
+  },
+  section: {
+    paddingHorizontal: space.lg + space.xs, // 20
+    paddingTop: space.xl - 2,
+  },
+  eyebrow: {
+    fontFamily: font.semibold,
+    fontSize: 11,
+    letterSpacing: 0.1 * 11,
+    opacity: textOpacity.secondary,
+    paddingHorizontal: 2,
+    paddingBottom: 14,
+  },
+  list: {
+    gap: 14,
+  },
+});

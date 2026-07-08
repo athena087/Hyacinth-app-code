@@ -1,6 +1,5 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomNav } from '../../components/BottomNav';
 import { font, space, textOpacity } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
 import { WorldCard } from './WorldCard';
@@ -35,8 +34,6 @@ export default function HomeScreen() {
           <WorldCard key={world.id} world={world} />
         ))}
       </ScrollView>
-
-      <BottomNav />
     </View>
   );
 }

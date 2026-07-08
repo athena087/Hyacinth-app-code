@@ -1,100 +1,94 @@
-import { Basket, House, MagnifyingGlass, User } from 'phosphor-react-native';
 import type { IconProps } from 'phosphor-react-native';
-import { ComponentType, useState } from 'react';
+import { ComponentType, forwardRef } from 'react';
 import {
-  LayoutAnimation,
-  Platform,
   Pressable,
+  PressableProps,
   StyleSheet,
-  UIManager,
   View,
+  ViewProps,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radius, space } from '../theme/tokens';
 import { useTokens } from '../theme/useTokens';
 
-// LayoutAnimation needs opting-in on old-architecture Android for the
-// active-pill width to tween (~150ms) rather than jump.
-if (
-  Platform.OS === 'android' &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
-type Tab = { key: string; Icon: ComponentType<IconProps> };
-
-const TABS: Tab[] = [
-  { key: 'home', Icon: House },
-  { key: 'search', Icon: MagnifyingGlass },
-  { key: 'basket', Icon: Basket },
-  { key: 'profile', Icon: User },
-];
-
 /**
- * Floating pill nav. Active tab gets a tint-filled pill with a Fill-weight icon
- * (the design system's one sanctioned Regular→Fill swap); inactive tabs are
- * transparent with Regular-weight ink icons. Tab selection is local visual
- * state only — no routing yet, since the other screens don't exist.
+ * Floating pill container. Rendered as the target of `<TabList asChild>`, so it
+ * receives the tab triggers as `children` and the row is positioned absolutely,
+ * letting screen content scroll underneath it.
  */
-export function BottomNav() {
+export const BottomNav = forwardRef<View, ViewProps>(function BottomNav(
+  { children, style, ...rest },
+  ref,
+) {
   const c = useTokens();
   const insets = useSafeAreaInsets();
-  const [active, setActive] = useState(0);
 
   return (
     <View
+      ref={ref}
       pointerEvents="box-none"
-      style={[styles.wrap, { bottom: space.xxxl - 6 + insets.bottom }]}
+      // Incoming `style` first so our floating layout wins over TabList's default row styling.
+      style={[style as ViewProps['style'], styles.wrap, { bottom: insets.bottom + space.xs }]}
+      {...rest}
     >
-      <View
-        style={[
-          styles.pill,
-          { backgroundColor: c.surface, borderColor: c.hairline },
-        ]}
-      >
-        {TABS.map((tab, i) => {
-          const isActive = i === active;
-          const Icon = tab.Icon;
-          return (
-            <Pressable
-              key={tab.key}
-              onPress={() => {
-                LayoutAnimation.configureNext(
-                  LayoutAnimation.create(
-                    150,
-                    LayoutAnimation.Types.easeOut,
-                    LayoutAnimation.Properties.opacity,
-                  ),
-                );
-                setActive(i);
-              }}
-              style={[
-                styles.button,
-                {
-                  width: isActive ? 60 : 46,
-                  backgroundColor: isActive ? c.tint : 'transparent',
-                },
-              ]}
-            >
-              <Icon
-                size={26}
-                weight={isActive ? 'fill' : 'regular'}
-                color={isActive ? c.tintInk : c.ink}
-              />
-            </Pressable>
-          );
-        })}
+      <View style={[styles.pill, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+        {children}
       </View>
     </View>
   );
-}
+});
+
+type NavButtonProps = Omit<PressableProps, 'children'> & {
+  icon: ComponentType<IconProps>;
+  /** Supplied by TabTrigger (asChild) for real tabs; false for inert buttons. */
+  isFocused?: boolean;
+  /** Passed by TabTrigger; unused visually. */
+  href?: string;
+};
+
+/**
+ * A single nav icon. Active tab gets a wider tint pill + Fill-weight icon (the
+ * design system's one sanctioned Regular→Fill swap); inactive/inert tabs are
+ * transparent with a Regular ink icon. forwardRef so TabTrigger's Slot can wire
+ * press handlers onto the underlying Pressable.
+ */
+export const NavButton = forwardRef<View, NavButtonProps>(function NavButton(
+  { icon: Icon, isFocused = false, href: _href, style, ...rest },
+  ref,
+) {
+  const c = useTokens();
+
+  return (
+    <Pressable
+      ref={ref}
+      style={[
+        styles.button,
+        {
+          width: isFocused ? 60 : 46,
+          backgroundColor: isFocused ? c.tint : 'transparent',
+        },
+      ]}
+      {...rest}
+    >
+      <Icon
+        size={26}
+        weight={isFocused ? 'fill' : 'regular'}
+        color={isFocused ? c.tintInk : c.ink}
+      />
+    </Pressable>
+  );
+});
 
 const styles = StyleSheet.create({
   wrap: {
     position: 'absolute',
     left: 0,
     right: 0,
+    // Own the layout explicitly: TabList (asChild) leaks its default
+    // flexDirection:'row' + justifyContent:'space-between' onto this View, which
+    // would otherwise shove the single pill to the left edge instead of center.
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   pill: {
