@@ -14,6 +14,12 @@ export type ColorTokens = {
   tintInk: string;
   soul: string;
   error: string;
+  /** Recessed surfaces below `bg` — bottom sheets, raised trays. */
+  canvas: string;
+  /** Filled input/search-field background. */
+  field: string;
+  /** Grab-handle / drag-affordance color (semi-transparent). */
+  handle: string;
 };
 
 export const light: ColorTokens = {
@@ -25,6 +31,9 @@ export const light: ColorTokens = {
   tintInk: '#3D2E0A',
   soul: '#F6E199',
   error: '#D64545',
+  canvas: '#EDEBE7',
+  field: '#EEEBE6',
+  handle: 'rgba(0,0,0,0.18)',
 };
 
 export const dark: ColorTokens = {
@@ -36,6 +45,9 @@ export const dark: ColorTokens = {
   tintInk: '#F6E199',
   soul: '#F6E199',
   error: '#D64545',
+  canvas: '#161616',
+  field: '#242424',
+  handle: 'rgba(255,255,255,0.28)',
 };
 
 /** 4px base, strict scale. */
