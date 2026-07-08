@@ -1,7 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CaretLeft, MagnifyingGlass, SlidersHorizontal, X } from 'phosphor-react-native';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SEARCH_PLACEHOLDER } from '../search/searchData';
 import { font, space } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
 import { LEFT_COLUMN, RESULT_CHIPS, RIGHT_COLUMN, ResultTile } from './resultsData';
@@ -11,7 +13,8 @@ export default function ResultsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { q } = useLocalSearchParams<{ q?: string }>();
-  const query = typeof q === 'string' ? q : '';
+  // Seed the editable search field from the query param; user can alter it here.
+  const [query, setQuery] = useState(typeof q === 'string' ? q : '');
 
   const Column = ({ tiles, offset }: { tiles: ResultTile[]; offset?: number }) => (
     <View style={[styles.column, offset ? { marginTop: offset } : null]}>
@@ -31,18 +34,20 @@ export default function ResultsScreen() {
       {/* Search chrome */}
       <View style={[styles.header, { paddingTop: insets.top + space.lg }]}>
         <View style={styles.searchRow}>
-          <Pressable onPress={() => router.back()} hitSlop={6} style={styles.iconBtn}>
+          <Pressable onPress={() => router.dismissAll()} hitSlop={6} style={styles.iconBtn}>
             <CaretLeft size={26} color={c.ink} />
           </Pressable>
-          <Pressable
-            onPress={() => router.back()}
-            style={[styles.field, { backgroundColor: c.surface, borderColor: c.hairline }]}
-          >
+          <View style={[styles.field, { backgroundColor: c.surface, borderColor: c.hairline }]}>
             <MagnifyingGlass size={20} color={c.ink} style={{ opacity: 0.55 }} />
-            <Text style={[styles.query, { color: c.ink }]} numberOfLines={1}>
-              {query}
-            </Text>
-          </Pressable>
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder={SEARCH_PLACEHOLDER}
+              placeholderTextColor={c.ink + '8C'} // ~0.55 alpha
+              style={[styles.query, { color: c.ink }]}
+              returnKeyType="search"
+            />
+          </View>
           <Pressable hitSlop={6} style={styles.iconBtn}>
             <SlidersHorizontal size={24} color={c.ink} />
           </Pressable>
@@ -102,6 +107,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: font.regular,
     fontSize: 15,
+    padding: 0,
   },
   chips: {
     flexDirection: 'row',
