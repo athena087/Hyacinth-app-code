@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SearchChrome } from '../../components/SearchChrome';
 import { font, space } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
@@ -13,15 +13,19 @@ export default function ResultsScreen() {
   // Seed the editable search field from the query param; user can alter it here.
   const [query, setQuery] = useState(typeof q === 'string' ? q : '');
 
+  // Any result opens the (static) View Item screen, pushed within this stack.
+  const openItem = () => router.push('/search/item');
+
   const Column = ({ tiles, offset }: { tiles: ResultTile[]; offset?: number }) => (
     <View style={[styles.column, offset ? { marginTop: offset } : null]}>
       {tiles.map((tile) => (
-        <View
+        <Pressable
           key={tile.label}
+          onPress={openItem}
           style={[styles.tile, { height: tile.height, backgroundColor: c.hairline }]}
         >
           <Text style={[styles.tileLabel, { color: c.ink }]}>{tile.label}</Text>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
