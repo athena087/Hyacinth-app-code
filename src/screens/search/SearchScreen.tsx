@@ -11,10 +11,11 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRotatingIndex } from '../../hooks/useRotatingIndex';
 import { font, space } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
 import { ExploreSheet } from './ExploreSheet';
-import { SEARCH_PLACEHOLDER } from './searchData';
+import { SEARCH_PLACEHOLDER, SEARCH_PROMPTS } from './searchData';
 
 export default function SearchScreen() {
   const c = useTokens();
@@ -22,6 +23,9 @@ export default function SearchScreen() {
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
+
+  // Rotating hero prompt — changes each time the Search screen gains focus.
+  const prompt = SEARCH_PROMPTS[useRotatingIndex(SEARCH_PROMPTS)];
 
   // 0 = collapsed sheet, 1 = open. Drives sheet height, scrim + grid opacity.
   const progress = useRef(new Animated.Value(0)).current;
@@ -63,7 +67,7 @@ export default function SearchScreen() {
     <View style={[styles.root, { backgroundColor: c.bg }]}>
       {/* Hero */}
       <View style={[styles.hero, { paddingTop: insets.top + 96 }]}>
-        <Text style={[styles.title, { color: c.ink }]}>What will it be today?</Text>
+        <Text style={[styles.title, { color: c.ink }]}>{prompt}</Text>
         <Pressable
           onPress={openSearch}
           style={[styles.field, { backgroundColor: c.field }]}
