@@ -13,8 +13,8 @@ export default function ResultsScreen() {
   // Seed the editable search field from the query param; user can alter it here.
   const [query, setQuery] = useState(typeof q === 'string' ? q : '');
 
-  // Any result opens the (static) View Item screen (root route, so back returns
-  // here rather than switching tabs).
+  // Tapping a result opens the (static) View Item screen (root route, so back
+  // returns here rather than switching tabs).
   const openItem = () => router.push('/item');
 
   const Column = ({ tiles, offset }: { tiles: ResultTile[]; offset?: number }) => (

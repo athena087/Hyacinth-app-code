@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SwipeLeft } from '../../components/SwipeLeft';
 import { font, radius, space, textOpacity } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
 import type { World } from './worlds';
@@ -6,22 +7,22 @@ import type { World } from './worlds';
 /**
  * A single world in the feed: a full-bleed hero (currently a labeled
  * placeholder) followed by a caption row. Heroes break to full-bleed and are
- * never carded/bordered — space alone separates them. The hero is tappable and
- * opens the View Item screen (via onPress).
+ * never carded/bordered — space alone separates them. Swipe the hero left to
+ * open the View Item screen (via onOpen).
  */
-export function WorldCard({ world, onPress }: { world: World; onPress?: () => void }) {
+export function WorldCard({ world, onOpen }: { world: World; onOpen?: () => void }) {
   const c = useTokens();
 
   return (
     <View>
-      <Pressable onPress={onPress} style={[styles.hero, { backgroundColor: c.hairline }]}>
+      <SwipeLeft onSwipe={() => onOpen?.()} move={false} style={[styles.hero, { backgroundColor: c.hairline }]}>
         <Text
           style={[styles.heroLabel, { color: c.ink, opacity: textOpacity.secondary }]}
           numberOfLines={2}
         >
           {world.heroLabel}
         </Text>
-      </Pressable>
+      </SwipeLeft>
       <View style={[styles.caption, { backgroundColor: c.surface }]}>
         <Text style={[styles.captionText, { color: c.ink, opacity: textOpacity.secondary }]}>
           {world.pieces} pieces · composed

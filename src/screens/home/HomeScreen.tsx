@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { font, space, textOpacity } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
+import { useRotatingGreeting } from './useRotatingGreeting';
 import { WorldCard } from './WorldCard';
 import { WORLDS } from './worlds';
 
@@ -13,8 +14,9 @@ export default function HomeScreen() {
   const c = useTokens();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const greeting = useRotatingGreeting(USER_NAME);
 
-  // Any feed image opens the (static) View Item screen, same as the results feed.
+  // Swiping a feed image left opens the (static) View Item screen, as on results.
   const openItem = () => router.push('/item');
 
   return (
@@ -30,13 +32,11 @@ export default function HomeScreen() {
           ]}
         >
           <Text style={[styles.eyebrow, { color: c.ink }]}>FOR YOU</Text>
-          <Text style={[styles.title, { color: c.ink }]}>
-            Welcome back {USER_NAME}
-          </Text>
+          <Text style={[styles.title, { color: c.ink }]}>{greeting}</Text>
         </View>
 
         {WORLDS.map((world) => (
-          <WorldCard key={world.id} world={world} onPress={openItem} />
+          <WorldCard key={world.id} world={world} onOpen={openItem} />
         ))}
       </ScrollView>
     </View>
