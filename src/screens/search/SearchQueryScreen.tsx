@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { font, radius, space } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
-import { INITIAL_RECENTS, SEARCH_PLACEHOLDER } from './searchData';
+import { INITIAL_RECENTS } from './searchData';
 
 /**
  * The recent/type search screen. A pushed route (not a Modal) so it stays in
@@ -55,8 +55,6 @@ export default function SearchQueryScreen() {
             value={text}
             onChangeText={setText}
             onSubmitEditing={() => run(text)}
-            placeholder={SEARCH_PLACEHOLDER}
-            placeholderTextColor={c.ink + '8C'} // ~0.55 alpha
             style={[styles.input, { color: c.ink }]}
             returnKeyType="search"
           />

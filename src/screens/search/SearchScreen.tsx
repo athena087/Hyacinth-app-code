@@ -12,10 +12,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRotatingIndex } from '../../hooks/useRotatingIndex';
-import { font, space } from '../../theme/tokens';
+import { font } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
 import { ExploreSheet } from './ExploreSheet';
-import { SEARCH_PLACEHOLDER, SEARCH_PROMPTS } from './searchData';
+import { SEARCH_PROMPTS } from './searchData';
 
 export default function SearchScreen() {
   const c = useTokens();
@@ -51,8 +51,11 @@ export default function SearchScreen() {
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 4,
       onPanResponderRelease: (_, g) => {
-        if (g.dy < -24) animateRef.current(true);
-        else if (g.dy > 24) animateRef.current(false);
+        // A quick flick (velocity) or a short drag opens/closes the feed.
+        const up = g.vy < -0.35 || g.dy < -24;
+        const down = g.vy > 0.35 || g.dy > 24;
+        if (up) animateRef.current(true);
+        else if (down) animateRef.current(false);
         else animateRef.current(!openRef.current); // tap toggles
       },
     }),
@@ -73,9 +76,6 @@ export default function SearchScreen() {
           style={[styles.field, { backgroundColor: c.field }]}
         >
           <MagnifyingGlass size={21} color={c.ink} style={{ opacity: 0.55 }} />
-          <Text style={[styles.fieldText, { color: c.ink }]} numberOfLines={1}>
-            {SEARCH_PLACEHOLDER}
-          </Text>
         </Pressable>
       </View>
 
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   hero: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 20,
   },
   title: {
     fontFamily: font.medium,
@@ -112,19 +112,13 @@ const styles = StyleSheet.create({
   field: {
     marginTop: 30,
     width: '100%',
-    maxWidth: 300,
+    maxWidth: 340,
     height: 60,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 11,
     paddingHorizontal: 18,
     borderRadius: 12,
-  },
-  fieldText: {
-    flex: 1,
-    fontFamily: font.regular,
-    fontSize: 15,
-    opacity: 0.55,
   },
   scrim: {
     position: 'absolute',

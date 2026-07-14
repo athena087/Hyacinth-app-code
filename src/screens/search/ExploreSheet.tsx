@@ -1,24 +1,23 @@
 import {
   Animated,
   GestureResponderHandlers,
-  ScrollView,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { font, space } from '../../theme/tokens';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { space } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
-import { EXPLORE_TILES } from './searchData';
+import { ExploreFeed } from './ExploreFeed';
 
 const COLLAPSED_HEIGHT = 150;
 
 /**
- * The Explore / trending bottom sheet. Height and grid opacity are driven by
- * `progress` (0 = collapsed, 1 = open). The grab handle carries the pan
- * handlers (swipe up/down + tap-toggle, all resolved in the parent's
- * PanResponder). When collapsed the body ignores touches so it can't intercept
- * the invisible grid.
+ * The Explore / trending bottom sheet. Height is driven by `progress`
+ * (0 = collapsed, 1 = open); the feed stays visible so it peeks out of the
+ * collapsed sheet. The grab handle carries the pan handlers (swipe up/down +
+ * tap-toggle, resolved in the parent's PanResponder). When collapsed the body
+ * ignores touches so the peek can't intercept the flick-to-open.
  */
 export function ExploreSheet({
   progress,
@@ -32,17 +31,14 @@ export function ExploreSheet({
   label?: string;
 }) {
   const c = useTokens();
+  const insets = useSafeAreaInsets();
   const { height: screenH } = useWindowDimensions();
-  const expanded = Math.round(screenH * 0.84);
+  // Open all the way up to just below the Dynamic Island / status bar.
+  const expanded = screenH - insets.top;
 
   const height = progress.interpolate({
     inputRange: [0, 1],
     outputRange: [COLLAPSED_HEIGHT, expanded],
-  });
-  // Grid fades in only in the second half of the open gesture.
-  const gridOpacity = progress.interpolate({
-    inputRange: [0, 0.4, 1],
-    outputRange: [0, 0, 1],
   });
 
   return (
@@ -51,21 +47,10 @@ export function ExploreSheet({
         <View style={[styles.handle, { backgroundColor: c.handle }]} />
       </View>
 
-      <Animated.View style={[styles.body, { opacity: gridOpacity }]} pointerEvents={open ? 'auto' : 'none'}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: c.ink }]}>{label}</Text>
-            <Text style={[styles.trending, { color: c.ink }]}>Trending now</Text>
-          </View>
-          <View style={styles.grid}>
-            {EXPLORE_TILES.map((tileLabel) => (
-              <View key={tileLabel} style={[styles.tile, { backgroundColor: c.hairline }]}>
-                <Text style={[styles.tileLabel, { color: c.ink }]}>{tileLabel}</Text>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      </Animated.View>
+      {/* Feed stays visible so it peeks out when collapsed; only interactive when open. */}
+      <View style={styles.body} pointerEvents={open ? 'auto' : 'none'}>
+        <ExploreFeed label={label} />
+      </View>
     </Animated.View>
   );
 }
@@ -98,44 +83,5 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     paddingHorizontal: 14,
-  },
-  scrollContent: {
-    paddingBottom: 116, // clear the floating nav
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    paddingHorizontal: 2,
-    paddingTop: 6,
-    paddingBottom: 14,
-  },
-  title: {
-    fontFamily: font.semibold,
-    fontSize: 18,
-  },
-  trending: {
-    fontFamily: font.regular,
-    fontSize: 12,
-    opacity: 0.55,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  tile: {
-    // Two columns; the space-between remainder forms the column gutter.
-    width: '48.5%',
-    height: 150,
-    marginBottom: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tileLabel: {
-    fontFamily: font.regular,
-    fontSize: 13,
-    opacity: 0.55,
   },
 });
