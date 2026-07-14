@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { font, space, textOpacity } from '../../theme/tokens';
@@ -11,6 +12,10 @@ const USER_NAME = 'Athena';
 export default function HomeScreen() {
   const c = useTokens();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  // Any feed image opens the (static) View Item screen, same as the results feed.
+  const openItem = () => router.push('/item');
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
@@ -31,7 +36,7 @@ export default function HomeScreen() {
         </View>
 
         {WORLDS.map((world) => (
-          <WorldCard key={world.id} world={world} />
+          <WorldCard key={world.id} world={world} onPress={openItem} />
         ))}
       </ScrollView>
     </View>

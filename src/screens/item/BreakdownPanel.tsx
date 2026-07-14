@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { font, space } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
 import { formatPrice, ITEMS, PALETTE, parsePrice } from './itemData';
@@ -22,6 +23,7 @@ const FLASH_MS = 1300;
  */
 export function BreakdownPanel({ width }: { width: number }) {
   const c = useTokens();
+  const insets = useSafeAreaInsets();
 
   const [selItem, setSelItem] = useState(0);
   const [styleIdx, setStyleIdx] = useState<Record<number, number>>({});
@@ -86,7 +88,7 @@ export function BreakdownPanel({ width }: { width: number }) {
     <ScrollView
       style={[styles.panel, { width, backgroundColor: c.bg }]}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
     >
       {/* ── Collage: item chips + palette + add all ── */}
       <View style={[styles.collage, { backgroundColor: c.tint }]}>
@@ -222,7 +224,6 @@ export function BreakdownPanel({ width }: { width: number }) {
 
 const styles = StyleSheet.create({
   panel: { flex: 1 },
-  content: { paddingBottom: 128 }, // clear the floating bottom nav so the AI bar is fully visible
   slotLabel: { fontFamily: font.regular, fontSize: 12, opacity: 0.55 },
 
   collage: {
