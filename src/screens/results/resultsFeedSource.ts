@@ -1,17 +1,21 @@
-// Endless explore feed — a staggered two-column masonry, occasionally broken by
-// a full-width "hero world". Within each section the two columns are generated
-// to the SAME total height (and same tile count, so the gaps match), so worlds
-// vary in length yet both columns end flush — letting a hero span the full width
-// with the two worlds above it ending, and the two below starting, level.
+// Endless results feed — the same staggered two-column masonry as Explore,
+// occasionally broken by a full-width "hero world". Within each generated
+// section the two columns are built to the SAME total height (and same tile
+// count, so the gaps match), so worlds vary in length yet both columns end
+// flush — letting a hero span the full width with the two worlds above it
+// ending, and the two below starting, level.
+//
+// The world dimensions match the original Results page (heights in [MIN, MAX]),
+// so worlds keep the same size band as before — the page just keeps going now.
 
-export type ExploreTile = { id: string; label: string; height: number };
+export type ResultFeedTile = { id: string; label: string; height: number };
 
-export type ExploreSection = {
+export type ResultSection = {
   id: string;
-  left: ExploreTile[];
-  right: ExploreTile[];
+  left: ResultFeedTile[];
+  right: ResultFeedTile[];
   /** On occasion, a full-width world spanning both columns below the masonry. */
-  hero?: ExploreTile;
+  hero?: ResultFeedTile;
 };
 
 const LABELS = [
@@ -33,6 +37,7 @@ const LABELS = [
   'Airy loft',
 ];
 
+// Keep the world dimensions in the same band as the original Results tiles.
 const MIN = 250; // shortest a world can be
 const MAX = 350; // tallest a world can be
 const HERO_MIN = 280; // shortest a hero world can be
@@ -77,40 +82,42 @@ function heightsSummingTo(target: number, k: number): number[] {
 }
 
 /**
- * Stateful, endless source of explore sections. Keep one per feed (in a ref) so
+ * Stateful, endless source of result sections. Keep one per feed (in a ref) so
  * its id counters are self-contained and reset cleanly on remount.
  */
-export function createExploreFeed() {
+export function createResultsFeed() {
   let tid = 0;
   let sid = 0;
   let sectionIdx = 0;
 
-  const tile = (height: number): ExploreTile => {
+  const tile = (height: number): ResultFeedTile => {
     tid += 1;
-    return { id: `ex-${tid}`, label: pick(LABELS), height };
+    return { id: `res-${tid}`, label: pick(LABELS), height };
   };
 
-  const makeSection = (): ExploreSection => {
+  const makeSection = (): ResultSection => {
     const k = randInt(2, 4); // tiles per column (same count → matching gaps)
     const leftHeights = Array.from({ length: k }, () => randInt(MIN, MAX));
     const total = leftHeights.reduce((a, b) => a + b, 0);
     const rightHeights = heightsSummingTo(total, k);
 
     sid += 1;
-    const section: ExploreSection = {
+    const section: ResultSection = {
       id: `sec-${sid}`,
-      left: leftHeights.map(tile),
-      right: rightHeights.map(tile),
+      left: leftHeights.map((h) => tile(h)),
+      right: rightHeights.map((h) => tile(h)),
     };
     // Not the very first section, then only on occasion.
-    if (sectionIdx > 0 && Math.random() < HERO_CHANCE) section.hero = tile(randInt(HERO_MIN, HERO_MAX));
+    if (sectionIdx > 0 && Math.random() < HERO_CHANCE) {
+      section.hero = tile(randInt(HERO_MIN, HERO_MAX));
+    }
     sectionIdx += 1;
     return section;
   };
 
   return {
     /** Returns the next `n` sections in the endless stream. */
-    next(n: number): ExploreSection[] {
+    next(n: number): ResultSection[] {
       return Array.from({ length: n }, makeSection);
     },
   };
