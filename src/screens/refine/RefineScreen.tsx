@@ -1,27 +1,58 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SearchChrome } from '../../components/SearchChrome';
-import { RESULT_CHIPS } from '../results/resultsData';
 import { useTokens } from '../../theme/useTokens';
+import { FAMILIES, PALETTES } from '../search/moodLibrary';
+import { resolveQuery } from '../search/resolveQuery';
 import { RefineCarousel } from './RefineCarousel';
-import {
-  PALETTE_INITIAL,
-  PALETTE_OPTIONS,
-  THEME_INITIAL,
-  THEME_OPTIONS,
-} from './refineData';
+
+const THEME_OPTIONS = FAMILIES.map((f) => f.label);
+const PALETTE_OPTIONS = PALETTES.map((p) => p.label);
 
 export default function RefineScreen() {
   const c = useTokens();
   const router = useRouter();
-  const { q } = useLocalSearchParams<{ q?: string }>();
-  const [query, setQuery] = useState(typeof q === 'string' ? q : '');
+  const { q, theme, palette } = useLocalSearchParams<{
+    q?: string;
+    theme?: string;
+    palette?: string;
+  }>();
+  const queryText = typeof q === 'string' ? q : '';
+  const [query, setQuery] = useState(queryText);
 
-  // Enter re-runs the search: replace refine with a fresh results for the query.
-  const runQuery = (text: string) => {
+  // Open the carousels on whatever the current search resolved to, so refining
+  // starts from the active match rather than a fixed default.
+  const initial = useMemo(
+    () => resolveQuery(queryText, { theme, palette }),
+    [queryText, theme, palette],
+  );
+  const initialTheme = Math.max(0, FAMILIES.findIndex((f) => f.id === initial.family.id));
+  const initialPalette = Math.max(0, PALETTES.findIndex((p) => p.id === initial.palette.id));
+
+  const themeIdx = useRef(initialTheme);
+  const paletteIdx = useRef(initialPalette);
+
+  // Chips reflect the current selection (updated as the user turns the dials).
+  const [chips, setChips] = useState<string[]>([
+    FAMILIES[initialTheme].label,
+    PALETTES[initialPalette].label,
+  ]);
+  const syncChips = () =>
+    setChips([FAMILIES[themeIdx.current].label, PALETTES[paletteIdx.current].label]);
+
+  // Submitting applies the refinement: re-run results with the chosen facets.
+  const apply = (text: string) => {
     const next = text.trim();
-    if (next) router.replace({ pathname: '/search/results', params: { q: next } });
+    if (!next) return;
+    router.replace({
+      pathname: '/search/results',
+      params: {
+        q: next,
+        theme: FAMILIES[themeIdx.current].id,
+        palette: PALETTES[paletteIdx.current].id,
+      },
+    });
   };
 
   return (
@@ -30,14 +61,30 @@ export default function RefineScreen() {
         query={query}
         editable
         onChangeQuery={setQuery}
-        onSubmit={runQuery}
+        onSubmit={apply}
         onBack={() => router.back()}
-        chips={RESULT_CHIPS}
+        chips={chips}
       />
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <RefineCarousel title="THEME" options={THEME_OPTIONS} initialIndex={THEME_INITIAL} />
-        <RefineCarousel title="PALETTE" options={PALETTE_OPTIONS} initialIndex={PALETTE_INITIAL} />
+        <RefineCarousel
+          title="THEME"
+          options={THEME_OPTIONS}
+          initialIndex={initialTheme}
+          onChange={(i) => {
+            themeIdx.current = i;
+            syncChips();
+          }}
+        />
+        <RefineCarousel
+          title="PALETTE"
+          options={PALETTE_OPTIONS}
+          initialIndex={initialPalette}
+          onChange={(i) => {
+            paletteIdx.current = i;
+            syncChips();
+          }}
+        />
       </ScrollView>
     </View>
   );

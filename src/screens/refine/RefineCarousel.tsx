@@ -25,10 +25,13 @@ export function RefineCarousel({
   title,
   options,
   initialIndex,
+  onChange,
 }: {
   title: string;
   options: string[];
   initialIndex: number;
+  /** Fired with the selected option index whenever it changes. */
+  onChange?: (index: number) => void;
 }) {
   const c = useTokens();
   const { width } = useWindowDimensions();
@@ -39,6 +42,7 @@ export function RefineCarousel({
 
   const select = (i: number) => {
     setActive(i);
+    onChange?.(i);
     Animated.timing(pos, {
       toValue: i,
       duration: 420,

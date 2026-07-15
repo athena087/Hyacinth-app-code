@@ -1,14 +1,17 @@
-// Endless results feed — the same staggered two-column masonry as Explore,
-// occasionally broken by a full-width "hero world". Within each generated
-// section the two columns are built to the SAME total height (and same tile
-// count, so the gaps match), so worlds vary in length yet both columns end
-// flush — letting a hero span the full width with the two worlds above it
-// ending, and the two below starting, level.
+// Endless results feed — a staggered two-column masonry, occasionally broken by
+// a full-width "hero world". Within each generated section the two columns are
+// built to the SAME total height (and same tile count, so the gaps match), so
+// worlds vary in length yet both columns end flush — letting a hero span the
+// full width with the two worlds above it ending, and the two below starting,
+// level.
 //
-// The world dimensions match the original Results page (heights in [MIN, MAX]),
-// so worlds keep the same size band as before — the page just keeps going now.
+// The feed is parametrized by the resolved search (see resolveQuery): world
+// NAMES come from the matched family's settings × lights, and each tile is
+// TINTED from the matched palette — that colour + name pairing is what makes a
+// placeholder world read as on-mood without any photography. If the search hit
+// a bespoke hero world, it leads the very first section full-width.
 
-export type ResultFeedTile = { id: string; label: string; height: number };
+export type ResultFeedTile = { id: string; label: string; height: number; color: string };
 
 export type ResultSection = {
   id: string;
@@ -18,24 +21,16 @@ export type ResultSection = {
   hero?: ResultFeedTile;
 };
 
-const LABELS = [
-  'Sunroom, 3pm',
-  'Reading nook',
-  'Quiet kitchen',
-  'Linen bedroom',
-  'Slow morning',
-  'Warm study',
-  'Dusk parlour',
-  'Soft light',
-  'Coastal veranda',
-  'Olive terrace',
-  "Potter's corner",
-  'Garden room',
-  'Morning parlour',
-  'Weathered hallway',
-  'Sunlit alcove',
-  'Airy loft',
-];
+export type ResultsFeedConfig = {
+  /** Scene nouns — first half of a world name (from the matched family). */
+  settings: string[];
+  /** Light phrases — second half of a world name (from the matched family). */
+  lights: string[];
+  /** Hex tints for the tiles (from the matched palette). */
+  colors: string[];
+  /** Bespoke matched world; when present it leads section 0 full-width. */
+  hero?: { label: string };
+};
 
 // Keep the world dimensions in the same band as the original Results tiles.
 const MIN = 250; // shortest a world can be
@@ -82,17 +77,26 @@ function heightsSummingTo(target: number, k: number): number[] {
 }
 
 /**
- * Stateful, endless source of result sections. Keep one per feed (in a ref) so
- * its id counters are self-contained and reset cleanly on remount.
+ * Stateful, endless source of result sections for one resolved search. Keep one
+ * per feed (in a ref) so its id counters are self-contained and reset cleanly
+ * when a new search remounts the screen.
  */
-export function createResultsFeed() {
+export function createResultsFeed(config: ResultsFeedConfig) {
   let tid = 0;
   let sid = 0;
   let sectionIdx = 0;
+  let heroPending = Boolean(config.hero);
 
-  const tile = (height: number): ResultFeedTile => {
+  const worldName = () => `${pick(config.settings)}, ${pick(config.lights)}`;
+
+  const tile = (height: number, label?: string): ResultFeedTile => {
     tid += 1;
-    return { id: `res-${tid}`, label: pick(LABELS), height };
+    return {
+      id: `res-${tid}`,
+      label: label ?? worldName(),
+      height,
+      color: pick(config.colors),
+    };
   };
 
   const makeSection = (): ResultSection => {
@@ -107,8 +111,12 @@ export function createResultsFeed() {
       left: leftHeights.map((h) => tile(h)),
       right: rightHeights.map((h) => tile(h)),
     };
-    // Not the very first section, then only on occasion.
-    if (sectionIdx > 0 && Math.random() < HERO_CHANCE) {
+    // The bespoke matched world leads the first section; afterwards heroes just
+    // appear on occasion, as before.
+    if (heroPending && config.hero) {
+      section.hero = tile(randInt(HERO_MIN, HERO_MAX), config.hero.label);
+      heroPending = false;
+    } else if (sectionIdx > 0 && Math.random() < HERO_CHANCE) {
       section.hero = tile(randInt(HERO_MIN, HERO_MAX));
     }
     sectionIdx += 1;
