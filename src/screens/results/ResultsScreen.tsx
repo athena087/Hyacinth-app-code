@@ -76,7 +76,7 @@ export default function ResultsScreen() {
         query={query}
         editable
         onChangeQuery={setQuery}
-        onBack={() => router.dismissAll()}
+        onBack={() => router.back()}
         onFilter={() => router.push({ pathname: '/search/refine', params: { q: query } })}
         chips={RESULT_CHIPS}
       />

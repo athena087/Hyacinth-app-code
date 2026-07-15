@@ -42,7 +42,7 @@ const MIN = 250; // shortest a world can be
 const MAX = 350; // tallest a world can be
 const HERO_MIN = 280; // shortest a hero world can be
 const HERO_MAX = 500; // tallest a hero world can be
-const HERO_CHANCE = 0.5; // how often a section is capped with a hero world
+const HERO_CHANCE = 0.6; // how often a section is capped with a hero world
 
 const randInt = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
