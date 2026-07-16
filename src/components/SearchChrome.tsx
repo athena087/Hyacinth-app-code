@@ -1,5 +1,5 @@
 import { CaretLeft, MagnifyingGlass, SlidersHorizontal, X } from 'phosphor-react-native';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SEARCH_PLACEHOLDER } from '../screens/search/searchData';
 import { font, space } from '../theme/tokens';
@@ -10,10 +10,14 @@ import { useTokens } from '../theme/useTokens';
  * field (editable on Results, static display on Refine), a filter button, and
  * the soul-tinted filter chips. Keeps the two screens visually in lockstep.
  */
+export type Chip = { id: string; label: string };
+
 export function SearchChrome({
   query,
   onBack,
   chips,
+  onRemoveChip,
+  reserveChipSpace = false,
   editable = false,
   onChangeQuery,
   onSubmit,
@@ -21,7 +25,12 @@ export function SearchChrome({
 }: {
   query: string;
   onBack: () => void;
-  chips: string[];
+  /** Active refinement chips (empty when none). */
+  chips: Chip[];
+  /** Remove a refinement via its ✕. */
+  onRemoveChip?: (id: string) => void;
+  /** Reserve a row's height for chips so adding one doesn't shift the layout. */
+  reserveChipSpace?: boolean;
   editable?: boolean;
   onChangeQuery?: (text: string) => void;
   onSubmit?: (text: string) => void;
@@ -63,14 +72,24 @@ export function SearchChrome({
         )}
       </View>
 
-      <View style={styles.chips}>
-        {chips.map((label) => (
-          <View key={label} style={[styles.chip, { backgroundColor: c.soul }]}>
-            <X size={12} color={c.onSoul} style={styles.chipX} />
-            <Text style={[styles.chipText, { color: c.onSoul }]}>{label}</Text>
-          </View>
-        ))}
-      </View>
+      {(chips.length > 0 || reserveChipSpace) && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={styles.chips}
+          contentContainerStyle={styles.chipsContent}
+        >
+          {chips.map((chip) => (
+            <View key={chip.id} style={[styles.chip, { backgroundColor: c.soul }]}>
+              <Pressable onPress={() => onRemoveChip?.(chip.id)} hitSlop={8}>
+                <X size={12} color={c.onSoul} style={{ opacity: 0.7 }} />
+              </Pressable>
+              <Text style={[styles.chipText, { color: c.onSoul }]}>{chip.label}</Text>
+            </View>
+          ))}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -109,22 +128,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     padding: 0,
   },
+  // Single-line horizontal scroller; fixed height reserves space so the first
+  // chip never shifts the layout (empty or full, the row is the same height).
   chips: {
-    flexDirection: 'row',
+    height: 34,
+    flexGrow: 0,
+  },
+  chipsContent: {
+    alignItems: 'center',
     gap: 8,
   },
+  // An individual refinement box, sized to its own content.
   chip: {
-    flex: 1,
-    height: 36,
-    borderRadius: 6,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipX: {
-    position: 'absolute',
-    top: 5,
-    left: 7,
-    opacity: 0.6,
+    gap: 6,
+    height: 34,
+    paddingHorizontal: 12,
+    borderRadius: 6,
   },
   chipText: {
     fontFamily: font.semibold,

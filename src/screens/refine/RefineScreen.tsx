@@ -1,14 +1,22 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { SearchChrome } from '../../components/SearchChrome';
+import { LayoutChangeEvent, ScrollView, StyleSheet, View } from 'react-native';
+import { Chip, SearchChrome } from '../../components/SearchChrome';
 import { useTokens } from '../../theme/useTokens';
-import { FAMILIES, PALETTES } from '../search/moodLibrary';
+import {
+  familyById,
+  paletteById,
+  relevantPalettes,
+  relevantThemes,
+} from '../search/moodLibrary';
 import { resolveQuery } from '../search/resolveQuery';
 import { RefineCarousel } from './RefineCarousel';
 
-const THEME_OPTIONS = FAMILIES.map((f) => f.label);
-const PALETTE_OPTIONS = PALETTES.map((p) => p.label);
+const parseList = (v: string | string[] | undefined): string[] =>
+  typeof v === 'string' ? v.split(',').map((s) => s.trim()).filter(Boolean) : [];
+
+const toggle = (list: string[], id: string): string[] =>
+  list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 
 export default function RefineScreen() {
   const c = useTokens();
@@ -21,38 +29,52 @@ export default function RefineScreen() {
   const queryText = typeof q === 'string' ? q : '';
   const [query, setQuery] = useState(queryText);
 
-  // Open the carousels on whatever the current search resolved to, so refining
-  // starts from the active match rather than a fixed default.
-  const initial = useMemo(
-    () => resolveQuery(queryText, { theme, palette }),
-    [queryText, theme, palette],
-  );
-  const initialTheme = Math.max(0, FAMILIES.findIndex((f) => f.id === initial.family.id));
-  const initialPalette = Math.max(0, PALETTES.findIndex((p) => p.id === initial.palette.id));
+  // Options are tailored to the search's resolved (primary) family.
+  const base = useMemo(() => resolveQuery(queryText), [queryText]);
+  const themeOptions = useMemo(() => relevantThemes(base.family.id), [base]);
+  const paletteOptions = useMemo(() => relevantPalettes(base.family.id), [base]);
 
-  const themeIdx = useRef(initialTheme);
-  const paletteIdx = useRef(initialPalette);
+  // Active refinements — none unless the search arrived with them. Multiple
+  // themes and multiple palettes may be added.
+  const [committedThemes, setCommittedThemes] = useState<string[]>(() => parseList(theme));
+  const [committedPalettes, setCommittedPalettes] = useState<string[]>(() => parseList(palette));
 
-  // Chips reflect the current selection (updated as the user turns the dials).
-  const [chips, setChips] = useState<string[]>([
-    FAMILIES[initialTheme].label,
-    PALETTES[initialPalette].label,
-  ]);
-  const syncChips = () =>
-    setChips([FAMILIES[themeIdx.current].label, PALETTES[paletteIdx.current].label]);
+  // One chip per committed refinement; id encodes its axis for removal.
+  const chips: Chip[] = [
+    ...committedThemes.map((id) => ({ id: `theme:${id}`, label: familyById(id)?.label ?? id })),
+    ...committedPalettes.map((id) => ({ id: `palette:${id}`, label: paletteById(id)?.label ?? id })),
+  ];
 
-  // Submitting applies the refinement: re-run results with the chosen facets.
+  const removeChip = (chipId: string) => {
+    const [axis, id] = chipId.split(':');
+    if (axis === 'theme') setCommittedThemes((cur) => cur.filter((x) => x !== id));
+    if (axis === 'palette') setCommittedPalettes((cur) => cur.filter((x) => x !== id));
+  };
+
+  const themeCommitted = themeOptions
+    .map((f, i) => (committedThemes.includes(f.id) ? i : -1))
+    .filter((i) => i >= 0);
+  const paletteCommitted = paletteOptions
+    .map((p, i) => (committedPalettes.includes(p.id) ? i : -1))
+    .filter((i) => i >= 0);
+
+  // Leaving the screen (back or submit) applies the committed refinements.
   const apply = (text: string) => {
-    const next = text.trim();
-    if (!next) return;
-    router.replace({
-      pathname: '/search/results',
-      params: {
-        q: next,
-        theme: FAMILIES[themeIdx.current].id,
-        palette: PALETTES[paletteIdx.current].id,
-      },
-    });
+    const next = text.trim() || queryText;
+    const params: Record<string, string> = { q: next };
+    if (committedThemes.length) params.theme = committedThemes.join(',');
+    if (committedPalettes.length) params.palette = committedPalettes.join(',');
+    router.replace({ pathname: '/search/results', params });
+  };
+
+  // Snap the vertical scroll to each carousel's top so a carousel never rests
+  // half-scrolled (which would misalign its horizontal swipe). Offsets are
+  // measured from layout; decelerationRate keeps the snap smooth, not abrupt.
+  const sectionY = useRef<[number, number]>([0, 0]);
+  const [snapOffsets, setSnapOffsets] = useState<number[]>([]);
+  const onSectionLayout = (i: 0 | 1) => (e: LayoutChangeEvent) => {
+    sectionY.current[i] = e.nativeEvent.layout.y;
+    setSnapOffsets([sectionY.current[0], sectionY.current[1]].sort((a, b) => a - b));
   };
 
   return (
@@ -62,29 +84,38 @@ export default function RefineScreen() {
         editable
         onChangeQuery={setQuery}
         onSubmit={apply}
-        onBack={() => router.back()}
+        onBack={() => apply(query)}
         chips={chips}
+        onRemoveChip={removeChip}
+        reserveChipSpace
       />
 
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <RefineCarousel
-          title="THEME"
-          options={THEME_OPTIONS}
-          initialIndex={initialTheme}
-          onChange={(i) => {
-            themeIdx.current = i;
-            syncChips();
-          }}
-        />
-        <RefineCarousel
-          title="PALETTE"
-          options={PALETTE_OPTIONS}
-          initialIndex={initialPalette}
-          onChange={(i) => {
-            paletteIdx.current = i;
-            syncChips();
-          }}
-        />
+      <ScrollView
+        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+        snapToOffsets={snapOffsets.length === 2 ? snapOffsets : undefined}
+        snapToEnd={false}
+        decelerationRate="fast"
+      >
+        <View onLayout={onSectionLayout(0)}>
+          <RefineCarousel
+            title="THEME"
+            options={themeOptions.map((f) => f.label)}
+            initialIndex={themeCommitted[0] ?? 0}
+            committedIndices={themeCommitted}
+            onSelect={(i) => setCommittedThemes((cur) => toggle(cur, themeOptions[i].id))}
+          />
+        </View>
+        <View onLayout={onSectionLayout(1)}>
+          <RefineCarousel
+            title="PALETTE"
+            options={paletteOptions.map((p) => p.label)}
+            initialIndex={paletteCommitted[0] ?? 0}
+            committedIndices={paletteCommitted}
+            onSelect={(i) => setCommittedPalettes((cur) => toggle(cur, paletteOptions[i].id))}
+          />
+        </View>
       </ScrollView>
     </View>
   );
@@ -93,5 +124,5 @@ export default function RefineScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scroll: { flex: 1 },
-  content: { paddingBottom: 128 }, // clear the floating nav
+  content: { paddingBottom: 148 }, // clear the floating nav with room to spare
 });

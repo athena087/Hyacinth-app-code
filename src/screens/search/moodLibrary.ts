@@ -304,3 +304,45 @@ export const paletteById = (id: string | undefined): MoodPalette | undefined =>
   PALETTES.find((p) => p.id === id);
 
 export const DEFAULT_FAMILY_ID = 'warm';
+
+// Relevance — which refinements make sense for a given search. Keyed by the
+// query's resolved (primary) family, so the refine carousels only offer nearby
+// themes and fitting palettes (a beach search never offers "Botanical").
+const FAMILY_RELATED: Record<string, string[]> = {
+  coastal: ['minimal', 'mediterranean', 'japandi'],
+  warm: ['rustic', 'minimal', 'moody'],
+  minimal: ['japandi', 'coastal', 'moody'],
+  rustic: ['warm', 'botanical', 'mediterranean'],
+  botanical: ['rustic', 'mediterranean', 'coastal'],
+  mediterranean: ['coastal', 'rustic', 'botanical'],
+  japandi: ['minimal', 'warm', 'coastal'],
+  moody: ['warm', 'minimal', 'rustic'],
+};
+
+const FAMILY_PALETTES: Record<string, string[]> = {
+  coastal: ['sand', 'sky', 'slate'],
+  warm: ['clay', 'ochre', 'walnut', 'sand'],
+  minimal: ['slate', 'sand', 'pewter'],
+  rustic: ['walnut', 'ochre', 'olive'],
+  botanical: ['sage', 'olive', 'sand'],
+  mediterranean: ['olive', 'ochre', 'sand', 'clay'],
+  japandi: ['walnut', 'sand', 'slate'],
+  moody: ['pewter', 'slate', 'walnut'],
+};
+
+/** Themes worth offering for a search whose primary family is `primaryId`. */
+export function relevantThemes(primaryId: string): MoodFamily[] {
+  const ids = [primaryId, ...(FAMILY_RELATED[primaryId] ?? [])];
+  return ids
+    .map((id) => familyById(id))
+    .filter((f): f is MoodFamily => Boolean(f));
+}
+
+/** Palettes worth offering for a search whose primary family is `primaryId`. */
+export function relevantPalettes(primaryId: string): MoodPalette[] {
+  const fam = familyById(primaryId);
+  const ids = FAMILY_PALETTES[primaryId] ?? (fam ? [fam.defaultPaletteId] : []);
+  return ids
+    .map((id) => paletteById(id))
+    .filter((p): p is MoodPalette => Boolean(p));
+}
