@@ -49,12 +49,17 @@ function scoreTags(tokens: Set<string>, tags: string[]): number {
   return score;
 }
 
-/** A hero wins when every word of one of its triggers is present in the query. */
+/**
+ * A hero wins when every word of one of its triggers is present in the query.
+ * Triggers are normalized through the SAME tokenizer as the query, so hyphens
+ * and stopwords in a trigger phrase (e.g. "sun-faded", "canvas and denim") can't
+ * silently prevent a match.
+ */
 function matchHero(tokens: Set<string>): HeroWorld | undefined {
   return HERO_WORLDS.find((h) =>
     h.triggers.some((trigger) => {
-      const words = trigger.split(' ').filter(Boolean);
-      return words.every((w) => tokens.has(w));
+      const words = tokenize(trigger);
+      return words.length > 0 && words.every((w) => tokens.has(w));
     }),
   );
 }
