@@ -30,23 +30,29 @@ export default function ViewItemScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
-  // The world that was tapped. `family`/`palette` come explicitly from Results;
-  // otherwise (e.g. the Home feed) they're inferred from the world's name.
-  const { world, family, palette } = useLocalSearchParams<{
+  // The world that was tapped. `family`/`palette` come explicitly from Results
+  // (and from the bag reopen); otherwise they're inferred from the world's name.
+  // `piece` (a style name) focuses that exact piece in the breakdown.
+  const { world, family, palette, piece } = useLocalSearchParams<{
     world?: string;
     family?: string;
     palette?: string;
+    piece?: string;
   }>();
   const worldName = typeof world === 'string' ? world : '';
   const domain = isApparelWorld(worldName); // apparel worlds get Size, objects get Dimensions
-  const built = useMemo(() => {
-    const fam = familyById(family) ?? resolveQuery(worldName).family;
-    const pal = paletteById(palette) ?? resolveQuery(worldName).palette;
-    return buildWorldItems(fam.id, pal.id, worldName || fam.id, domain);
-  }, [worldName, family, palette, domain]);
+  const fam = familyById(family) ?? resolveQuery(worldName).family;
+  const pal = paletteById(palette) ?? resolveQuery(worldName).palette;
+  const built = useMemo(
+    () => buildWorldItems(fam.id, pal.id, worldName || fam.id, domain),
+    [fam.id, pal.id, worldName, domain],
+  );
+
+  // A piece reopen lands straight on the breakdown panel, focused on that piece.
+  const focusPiece = typeof piece === 'string' && piece ? piece : undefined;
 
   const pagerRef = useRef<ScrollView>(null);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(focusPiece ? 1 : 0);
 
   const goPage = (n: number) => pagerRef.current?.scrollTo({ x: n * width, animated: true });
 
@@ -65,6 +71,7 @@ export default function ViewItemScreen() {
         ref={pagerRef}
         horizontal
         pagingEnabled
+        contentOffset={{ x: focusPiece ? width : 0, y: 0 }}
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={onScroll}
@@ -76,6 +83,9 @@ export default function ViewItemScreen() {
           palette={built.palette}
           domain={domain}
           world={worldName}
+          familyId={fam.id}
+          paletteId={pal.id}
+          focusPiece={focusPiece}
         />
       </ScrollView>
 

@@ -6,7 +6,7 @@ import { useCart } from '../../cart/CartContext';
 import { font, space } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
 import { BagCard } from './BagCard';
-import { formatPrice } from './bagData';
+import { BagItem, formatPrice } from './bagData';
 
 export default function BagScreen() {
   const c = useTokens();
@@ -16,6 +16,15 @@ export default function BagScreen() {
   const { items, total, count, remove } = useCart();
   const hasCards = count > 0;
   const countLabel = count === 1 ? '1 item' : `${count} items`;
+
+  // Reopen the world; a single piece also focuses itself in the breakdown.
+  const openWorld = (item: BagItem) => {
+    const params: Record<string, string> = { world: item.world! };
+    if (item.family) params.family = item.family;
+    if (item.palette) params.palette = item.palette;
+    if (!item.bundle) params.piece = item.name;
+    router.push({ pathname: '/item', params });
+  };
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
@@ -27,7 +36,12 @@ export default function BagScreen() {
         {hasCards ? (
           <View style={styles.list}>
             {items.map((item) => (
-              <BagCard key={item.id} item={item} onRemove={() => remove(item.id)} />
+              <BagCard
+                key={item.id}
+                item={item}
+                onRemove={() => remove(item.id)}
+                onPress={item.world ? () => openWorld(item) : undefined}
+              />
             ))}
           </View>
         ) : (

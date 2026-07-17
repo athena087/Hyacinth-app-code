@@ -9,12 +9,20 @@ import type { BagItem } from './bagData';
  * thumbnails; an "Item" shows a single full-width hero. A frosted round Remove
  * button floats top-right. Images are placeholders for now.
  */
-export function BagCard({ item, onRemove }: { item: BagItem; onRemove: () => void }) {
+export function BagCard({
+  item,
+  onRemove,
+  onPress,
+}: {
+  item: BagItem;
+  onRemove: () => void;
+  onPress?: () => void;
+}) {
   const c = useTokens();
   const KindIcon = item.bundle ? Stack : Tag;
 
   return (
-    <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+    <Pressable onPress={onPress} style={[styles.card, { backgroundColor: c.surface, borderColor: c.hairline }]}>
       <Pressable
         onPress={onRemove}
         hitSlop={6}
@@ -52,7 +60,7 @@ export function BagCard({ item, onRemove }: { item: BagItem; onRemove: () => voi
         </View>
         <Text style={[styles.price, { color: c.ink }]}>{item.price}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

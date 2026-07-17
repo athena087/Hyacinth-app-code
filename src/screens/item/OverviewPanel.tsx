@@ -45,6 +45,7 @@ export function OverviewPanel({
     title: world || 'This world',
     subtitle: `${pieces} pieces`,
     color: palette[0] ?? c.hairline,
+    world,
   };
   const saved = isSaved(worldEntry.key);
 

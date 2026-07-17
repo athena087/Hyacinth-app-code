@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { font, space, textOpacity } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
@@ -11,7 +12,14 @@ const USER_NAME = 'Athena';
 export default function ProfileScreen() {
   const c = useTokens();
   const insets = useSafeAreaInsets();
-  const { boards } = useSaved();
+  const router = useRouter();
+  const { boards, deleteBoard } = useSaved();
+
+  const confirmDelete = (id: string, title: string) =>
+    Alert.alert('Delete list', `Remove "${title}"? This can't be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteBoard(id) },
+    ]);
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
@@ -31,11 +39,22 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <Text style={[styles.eyebrow, { color: c.ink }]}>SAVED LISTS</Text>
-          <View style={styles.list}>
-            {boards.map((board) => (
-              <SavedListCard key={board.id} board={board} />
-            ))}
-          </View>
+          {boards.length === 0 ? (
+            <Text style={[styles.empty, { color: c.ink }]}>
+              No lists yet — save a world or piece to start one.
+            </Text>
+          ) : (
+            <View style={styles.list}>
+              {boards.map((board) => (
+                <SavedListCard
+                  key={board.id}
+                  board={board}
+                  onPress={() => router.push(`/board/${board.id}`)}
+                  onDelete={() => confirmDelete(board.id, board.title)}
+                />
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -99,5 +118,11 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 14,
+  },
+  empty: {
+    fontFamily: font.regular,
+    fontSize: 14,
+    opacity: 0.5,
+    paddingVertical: space.md,
   },
 });

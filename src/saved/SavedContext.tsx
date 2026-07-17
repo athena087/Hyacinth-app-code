@@ -18,19 +18,18 @@ export type SavedEntry = {
   subtitle?: string;
   /** Thumbnail tint (from the world/item palette). */
   color: string;
+  /** The world this belongs to — used to reopen it from a board. */
+  world?: string;
 };
 
 export type Board = { id: string; title: string; entries: SavedEntry[] };
 
-const STORAGE_KEY = 'hyacinth.savedBoards';
+// v2: starts with no boards. Bumped so any previously-seeded boards from the
+// earlier default are dropped, guaranteeing a clean empty start.
+const STORAGE_KEY = 'hyacinth.savedBoards.v2';
 
-// Seed with a few empty boards so the picker (and Profile) aren't blank. Reuses
-// the titles the Profile mock already showed.
-const DEFAULT_BOARDS: Board[] = [
-  { id: 'sunlit', title: 'Sunlit rooms', entries: [] },
-  { id: 'coastal', title: 'Coastal calm', entries: [] },
-  { id: 'nooks', title: 'Reading nooks', entries: [] },
-];
+// No boards to begin with — the user's first save creates one.
+const DEFAULT_BOARDS: Board[] = [];
 
 type SavedValue = {
   boards: Board[];
@@ -40,8 +39,10 @@ type SavedValue = {
   isSaved: (key: string) => boolean;
   save: (entry: SavedEntry, boardId: string) => void;
   unsave: (key: string, boardId: string) => void;
-  /** Create a board; returns its id. */
-  createBoard: (title: string) => string;
+  /** Create a board (optionally seeded with an entry); returns its id. */
+  createBoard: (title: string, entry?: SavedEntry) => string;
+  /** Delete a whole board. */
+  deleteBoard: (id: string) => void;
 };
 
 const SavedContext = createContext<SavedValue | null>(null);
@@ -111,10 +112,22 @@ export function SavedProvider({ children }: { children: ReactNode }) {
   );
 
   const createBoard = useCallback(
-    (title: string) => {
+    (title: string, entry?: SavedEntry) => {
       const id = `b-${Date.now().toString(36)}`;
-      persist([...boardsRef.current, { id, title: title.trim() || 'New list', entries: [] }]);
+      // Seed the entry in the same write — a separate save() would read a stale
+      // boardsRef (not yet re-rendered) and clobber this new board.
+      persist([
+        ...boardsRef.current,
+        { id, title: title.trim() || 'New list', entries: entry ? [entry] : [] },
+      ]);
       return id;
+    },
+    [persist],
+  );
+
+  const deleteBoard = useCallback(
+    (id: string) => {
+      persist(boardsRef.current.filter((b) => b.id !== id));
     },
     [persist],
   );
@@ -128,8 +141,9 @@ export function SavedProvider({ children }: { children: ReactNode }) {
       save,
       unsave,
       createBoard,
+      deleteBoard,
     }),
-    [boards, save, unsave, createBoard],
+    [boards, save, unsave, createBoard, deleteBoard],
   );
 
   return <SavedContext.Provider value={value}>{children}</SavedContext.Provider>;

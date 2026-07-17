@@ -54,8 +54,7 @@ export function SaveSheet({
   };
   const create = () => {
     if (!entry) return;
-    const id = createBoard(newTitle);
-    save(entry, id);
+    createBoard(newTitle, entry); // atomic: new board seeded with this entry
     setNewTitle('');
     setCreating(false);
   };

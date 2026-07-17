@@ -10,9 +10,11 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCart } from '../../cart/CartContext';
 import { SavedEntry, useSaved } from '../../saved/SavedContext';
 import { font, space } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
+import { BagItem } from '../bag/bagData';
 import {
   EMPTY_CONSTRAINTS,
   formatPrice,
@@ -26,8 +28,6 @@ import {
 import { RefineSheet } from './RefineSheet';
 import { SaveSheet } from './SaveSheet';
 
-const FLASH_MS = 1300;
-
 /**
  * Panel 2 — the breakdown: a collage of the look's items (tap to focus one), a
  * palette row and "add all" bundle button, then the chosen item's swappable
@@ -40,16 +40,24 @@ export function BreakdownPanel({
   palette,
   domain,
   world,
+  familyId,
+  paletteId,
+  focusPiece,
 }: {
   width: number;
   items: Item[];
   palette: string[];
   domain: ItemDomain;
   world: string;
+  familyId: string;
+  paletteId: string;
+  /** A style name to focus on mount (a piece reopened from the bag). */
+  focusPiece?: string;
 }) {
   const c = useTokens();
   const insets = useSafeAreaInsets();
   const { isSaved } = useSaved();
+  const { add: addToCart, remove: removeFromCart, has: inCart } = useCart();
   const [saveOpen, setSaveOpen] = useState(false);
 
   // Measurable refine — the applied constraints filter the pieces shown.
@@ -65,15 +73,20 @@ export function BreakdownPanel({
   const [selItem, setSelItem] = useState(0);
   const [styleIdx, setStyleIdx] = useState<Record<number, number>>({});
   const [colourIdx, setColourIdx] = useState<Record<string, number>>({});
-  const [flashItem, setFlashItem] = useState(false);
-  const [flashBundle, setFlashBundle] = useState(false);
 
-  const itemTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const bundleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => {
-    clearTimeout(itemTimer.current);
-    clearTimeout(bundleTimer.current);
-  }, []);
+  // Reopened from the bag on a specific piece → focus its category + style.
+  useEffect(() => {
+    if (!focusPiece) return;
+    for (let i = 0; i < items.length; i += 1) {
+      const s = items[i].styles.findIndex((st) => st.name === focusPiece);
+      if (s >= 0) {
+        setSelItem(i);
+        setStyleIdx((prev) => ({ ...prev, [i]: s }));
+        break;
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusPiece]);
 
   const styleFor = (i: number) => styleIdx[i] ?? 0;
   const ckey = (i: number, s: number) => `${i}:${s}`;
@@ -92,6 +105,7 @@ export function BreakdownPanel({
     title: style.name,
     subtitle: style.price,
     color: colour.sw,
+    world,
   };
   const itemSaved = isSaved(itemEntry.key);
 
@@ -114,14 +128,38 @@ export function BreakdownPanel({
     setColourIdx({});
   };
 
-  const flash = (
-    set: (v: boolean) => void,
-    timer: { current: ReturnType<typeof setTimeout> | undefined },
-  ) => {
-    clearTimeout(timer.current);
-    set(true);
-    timer.current = setTimeout(() => set(false), FLASH_MS);
+  // Add / remove the focused piece and the whole look to the bag.
+  const itemBagId = `cart:item:${world}:${style.name}`;
+  const bagItem: BagItem = {
+    id: itemBagId,
+    bundle: false,
+    kind: 'Item',
+    name: style.name,
+    meta: `${colour.n} · ${style.material}`,
+    price: style.price,
+    images: [item.label],
+    world,
+    family: familyId,
+    palette: paletteId,
   };
+  const itemInCart = inCart(itemBagId);
+  const toggleItem = () => (itemInCart ? removeFromCart(itemBagId) : addToCart(bagItem));
+
+  const lookBagId = `cart:look:${world}`;
+  const bagLook: BagItem = {
+    id: lookBagId,
+    bundle: true,
+    kind: `Look · ${shown.length} pieces`,
+    name: world || 'This look',
+    meta: shown.map((m) => m.label).join(', '),
+    price: formatPrice(bundleTotal),
+    images: shown.map((m) => m.label),
+    world,
+    family: familyId,
+    palette: paletteId,
+  };
+  const lookInCart = inCart(lookBagId);
+  const toggleLook = () => (lookInCart ? removeFromCart(lookBagId) : addToCart(bagLook));
 
   // The chosen item's styles are a native horizontal pager: swipe the image to
   // move through the styles (image + specs update together); dots mirror the page
@@ -189,16 +227,16 @@ export function BreakdownPanel({
         </View>
 
         <Pressable
-          onPress={() => flash(setFlashBundle, bundleTimer)}
+          onPress={toggleLook}
           style={[styles.bundleBtn, { backgroundColor: c.soul }]}
         >
-          {flashBundle ? (
+          {lookInCart ? (
             <Check size={19} weight="bold" color={c.onSoul} />
           ) : (
             <Plus size={19} weight="bold" color={c.onSoul} />
           )}
           <Text style={[styles.bundleText, { color: c.onSoul }]}>
-            {flashBundle ? 'Added' : `Add all · ${formatPrice(bundleTotal)}`}
+            {lookInCart ? 'Added to bag' : `Add all · ${formatPrice(bundleTotal)}`}
           </Text>
         </Pressable>
       </View>
@@ -280,16 +318,16 @@ export function BreakdownPanel({
         </View>
 
         <Pressable
-          onPress={() => flash(setFlashItem, itemTimer)}
+          onPress={toggleItem}
           style={[styles.itemBtn, { backgroundColor: c.ink }]}
         >
-          {flashItem ? (
+          {itemInCart ? (
             <Check size={19} weight="bold" color={c.bg} />
           ) : (
             <Basket size={19} color={c.bg} />
           )}
           <Text style={[styles.itemBtnText, { color: c.bg }]}>
-            {flashItem ? 'Added to basket' : `Add to basket · ${style.price}`}
+            {itemInCart ? 'Added to basket' : `Add to basket · ${style.price}`}
           </Text>
         </Pressable>
       </View>
