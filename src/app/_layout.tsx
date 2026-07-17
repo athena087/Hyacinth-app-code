@@ -9,6 +9,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { CartProvider } from '../cart/CartContext';
+import { DemoNameGate, DemoNameProvider } from '../demo/DemoName';
 import { SavedProvider } from '../saved/SavedContext';
 
 // Keep the splash up until Lilex is ready so text never flashes in a system
@@ -35,9 +36,14 @@ export default function RootLayout() {
   return (
     <CartProvider>
       <SavedProvider>
-        {/* headerShown off — screens render their own headers. */}
-        <Stack screenOptions={{ headerShown: false }} />
-        <StatusBar style="auto" />
+        {/* DEMO-ONLY: name landing gate — see src/demo/DemoName.tsx to remove. */}
+        <DemoNameProvider>
+          <DemoNameGate>
+            {/* headerShown off — screens render their own headers. */}
+            <Stack screenOptions={{ headerShown: false }} />
+          </DemoNameGate>
+          <StatusBar style="auto" />
+        </DemoNameProvider>
       </SavedProvider>
     </CartProvider>
   );

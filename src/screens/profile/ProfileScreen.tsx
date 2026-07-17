@@ -1,18 +1,17 @@
 import { useRouter } from 'expo-router';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDemoName } from '../../demo/DemoName';
 import { font, space, textOpacity } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
 import { useSaved } from '../../saved/SavedContext';
 import { SavedListCard } from './SavedListCard';
 
-// Placeholder until auth/user data exists.
-const USER_NAME = 'Athena';
-
 export default function ProfileScreen() {
   const c = useTokens();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { name } = useDemoName(); // DEMO-ONLY: from the launch name prompt
   const { boards, deleteBoard } = useSaved();
 
   const confirmDelete = (id: string, title: string) =>
@@ -33,7 +32,7 @@ export default function ProfileScreen() {
             <View style={styles.photo}>
               <Text style={styles.photoLabel}>Your photo</Text>
             </View>
-            <Text style={styles.polaroidName}>{USER_NAME}</Text>
+            <Text style={styles.polaroidName}>{name}</Text>
           </View>
         </View>
 

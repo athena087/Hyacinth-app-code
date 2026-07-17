@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
+import { useDemoName } from '../../demo/DemoName';
 import { font, textOpacity } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
 import { createFeedSource } from './feedSource';
@@ -8,15 +9,14 @@ import { useRotatingGreeting } from './useRotatingGreeting';
 import { WorldReel } from './WorldReel';
 import type { World } from './worlds';
 
-// Placeholder until auth/user data exists.
-const USER_NAME = 'Athena';
 const INITIAL_BATCH = 6; // small buffer of worlds ahead of the current page
 const PAGE = 6;
 
 export default function HomeScreen() {
   const c = useTokens();
   const router = useRouter();
-  const greeting = useRotatingGreeting(USER_NAME);
+  const { name } = useDemoName(); // DEMO-ONLY: from the launch name prompt
+  const greeting = useRotatingGreeting(name);
 
   // Endless feed source, kept per-mount so its cursor/id state is self-contained.
   const source = useRef(createFeedSource()).current;
