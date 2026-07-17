@@ -2,8 +2,8 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { font, space, textOpacity } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
+import { useSaved } from '../../saved/SavedContext';
 import { SavedListCard } from './SavedListCard';
-import { SAVED_LISTS } from './savedLists';
 
 // Placeholder until auth/user data exists.
 const USER_NAME = 'Athena';
@@ -11,6 +11,7 @@ const USER_NAME = 'Athena';
 export default function ProfileScreen() {
   const c = useTokens();
   const insets = useSafeAreaInsets();
+  const { boards } = useSaved();
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
@@ -31,8 +32,8 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={[styles.eyebrow, { color: c.ink }]}>SAVED LISTS</Text>
           <View style={styles.list}>
-            {SAVED_LISTS.map((list) => (
-              <SavedListCard key={list.id} list={list} />
+            {boards.map((board) => (
+              <SavedListCard key={board.id} board={board} />
             ))}
           </View>
         </View>

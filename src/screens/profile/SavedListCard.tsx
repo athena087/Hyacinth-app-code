@@ -1,27 +1,30 @@
 import { StyleSheet, Text, View } from 'react-native';
+import type { Board } from '../../saved/SavedContext';
 import { font, space } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
-import type { SavedList } from './savedLists';
 
 /**
- * A saved list: a bordered card with a 3-up thumbnail grid (placeholders for
- * now) and a title / piece-count row. Unlike the full-bleed home heroes, these
- * are carded — bordered with a soft radius per the mock.
+ * A saved board: a bordered card with a 3-up thumbnail grid (tinted from the
+ * board's first saved entries) and a title / count row.
  */
-export function SavedListCard({ list }: { list: SavedList }) {
+export function SavedListCard({ board }: { board: Board }) {
   const c = useTokens();
+  const count = board.entries.length;
 
   return (
     <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.hairline }]}>
       <View style={styles.grid}>
         {[0, 1, 2].map((i) => (
-          <View key={i} style={[styles.thumb, { backgroundColor: c.hairline }]} />
+          <View
+            key={i}
+            style={[styles.thumb, { backgroundColor: board.entries[i]?.color ?? c.hairline }]}
+          />
         ))}
       </View>
       <View style={styles.meta}>
-        <Text style={[styles.title, { color: c.ink }]}>{list.title}</Text>
+        <Text style={[styles.title, { color: c.ink }]}>{board.title}</Text>
         <Text style={[styles.count, { color: c.ink, opacity: 0.55 }]}>
-          {list.pieces} pieces
+          {count} saved
         </Text>
       </View>
     </View>

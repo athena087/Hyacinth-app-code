@@ -1,6 +1,6 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CaretLeft } from 'phosphor-react-native';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -12,7 +12,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTokens } from '../../theme/useTokens';
+import { familyById, paletteById } from '../search/moodLibrary';
+import { resolveQuery } from '../search/resolveQuery';
 import { BreakdownPanel } from './BreakdownPanel';
+import { buildWorldItems, isApparelWorld } from './itemData';
 import { OverviewPanel } from './OverviewPanel';
 
 /**
@@ -27,6 +30,21 @@ export default function ViewItemScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
+  // The world that was tapped. `family`/`palette` come explicitly from Results;
+  // otherwise (e.g. the Home feed) they're inferred from the world's name.
+  const { world, family, palette } = useLocalSearchParams<{
+    world?: string;
+    family?: string;
+    palette?: string;
+  }>();
+  const worldName = typeof world === 'string' ? world : '';
+  const domain = isApparelWorld(worldName); // apparel worlds get Size, objects get Dimensions
+  const built = useMemo(() => {
+    const fam = familyById(family) ?? resolveQuery(worldName).family;
+    const pal = paletteById(palette) ?? resolveQuery(worldName).palette;
+    return buildWorldItems(fam.id, pal.id, worldName || fam.id, domain);
+  }, [worldName, family, palette, domain]);
+
   const pagerRef = useRef<ScrollView>(null);
   const [page, setPage] = useState(0);
 
@@ -37,10 +55,9 @@ export default function ViewItemScreen() {
     if (next !== page) setPage(next);
   };
 
-  const onBack = () => {
-    if (page === 1) goPage(0);
-    else router.back();
-  };
+  // Back always exits to the origin (Home feed / Results), regardless of which
+  // panel is showing. Move between panels with the page dots or a swipe.
+  const onBack = () => router.back();
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
@@ -52,8 +69,14 @@ export default function ViewItemScreen() {
         scrollEventThrottle={16}
         onScroll={onScroll}
       >
-        <OverviewPanel width={width} />
-        <BreakdownPanel width={width} />
+        <OverviewPanel width={width} world={worldName} palette={built.palette} pieces={built.items.length} />
+        <BreakdownPanel
+          width={width}
+          items={built.items}
+          palette={built.palette}
+          domain={domain}
+          world={worldName}
+        />
       </ScrollView>
 
       {/* ── Floating overlays ── */}

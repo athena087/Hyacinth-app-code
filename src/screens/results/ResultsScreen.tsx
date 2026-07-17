@@ -39,7 +39,7 @@ const uniq = (arr: string[]): string[] => Array.from(new Set(arr));
  * changes — even when that change is a same-route param update (which does not
  * remount the parent).
  */
-function ResultsFeed({ config, onOpen }: { config: ResultsFeedConfig; onOpen: () => void }) {
+function ResultsFeed({ config, onOpen }: { config: ResultsFeedConfig; onOpen: (label: string) => void }) {
   const source = useRef(createResultsFeed(config)).current;
   const [sections, setSections] = useState<ResultSection[]>(() => source.next(INITIAL));
 
@@ -65,7 +65,7 @@ function ResultsFeed({ config, onOpen }: { config: ResultsFeedConfig; onOpen: ()
   // A labelled placeholder tile; `full` spans both columns (a hero world).
   const Tile = ({ tile, full }: { tile: ResultFeedTile; full?: boolean }) => (
     <Pressable
-      onPress={onOpen}
+      onPress={() => onOpen(tile.label)}
       style={[
         full ? styles.hero : styles.tile,
         { height: tile.height, backgroundColor: tile.color },
@@ -170,9 +170,17 @@ export default function ResultsScreen() {
     router.replace({ pathname: '/search/refine', params });
   };
 
-  // Tapping a result opens the (static) View Item screen (root route, so back
-  // returns here rather than switching tabs).
-  const openItem = () => router.push('/item');
+  // Tapping a result opens the View Item screen for that world (root route, so
+  // back returns here). The world's family + palette theme its items.
+  const openItem = (worldLabel: string) =>
+    router.push({
+      pathname: '/item',
+      params: {
+        world: worldLabel,
+        family: themeIds[0] ?? base.family.id,
+        palette: paletteIds[0] ?? base.palette.id,
+      },
+    });
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>

@@ -34,7 +34,7 @@ export function WorldReel({
 }: {
   data: World[];
   onEndReached: () => void;
-  onOpen: () => void;
+  onOpen: (label: string) => void;
   header?: ReactNode;
 }) {
   const c = useTokens();

@@ -1,7 +1,8 @@
-import { Basket, Check, Plus, Sparkle } from 'phosphor-react-native';
+import { Basket, Check, Heart, Plus, Sparkle } from 'phosphor-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  PanResponder,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,9 +10,21 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SavedEntry, useSaved } from '../../saved/SavedContext';
 import { font, space } from '../../theme/tokens';
 import { useTokens } from '../../theme/useTokens';
-import { formatPrice, ITEMS, PALETTE, parsePrice } from './itemData';
+import {
+  EMPTY_CONSTRAINTS,
+  formatPrice,
+  hasConstraints,
+  Item,
+  ItemDomain,
+  matchingItems,
+  parsePrice,
+  RefineConstraints,
+} from './itemData';
+import { RefineSheet } from './RefineSheet';
+import { SaveSheet } from './SaveSheet';
 
 const FLASH_MS = 1300;
 
@@ -21,9 +34,33 @@ const FLASH_MS = 1300;
  * style (swipe or dots), colourways, and add-to-basket. Mirrors the design's
  * selItem / styleIdx / colourIdx state model.
  */
-export function BreakdownPanel({ width }: { width: number }) {
+export function BreakdownPanel({
+  width,
+  items,
+  palette,
+  domain,
+  world,
+}: {
+  width: number;
+  items: Item[];
+  palette: string[];
+  domain: ItemDomain;
+  world: string;
+}) {
   const c = useTokens();
   const insets = useSafeAreaInsets();
+  const { isSaved } = useSaved();
+  const [saveOpen, setSaveOpen] = useState(false);
+
+  // Measurable refine — the applied constraints filter the pieces shown.
+  const [refineOpen, setRefineOpen] = useState(false);
+  const [constraints, setConstraints] = useState<RefineConstraints>(EMPTY_CONSTRAINTS);
+  const refined = hasConstraints(constraints);
+  const view = useMemo(
+    () => (refined ? matchingItems(items, constraints, domain) : items),
+    [items, constraints, domain, refined],
+  );
+  const shown = view.length ? view : items;
 
   const [selItem, setSelItem] = useState(0);
   const [styleIdx, setStyleIdx] = useState<Record<number, number>>({});
@@ -42,22 +79,40 @@ export function BreakdownPanel({ width }: { width: number }) {
   const ckey = (i: number, s: number) => `${i}:${s}`;
   const colourFor = (i: number, s: number) => colourIdx[ckey(i, s)] ?? 0;
 
-  const item = ITEMS[selItem];
+  const item = shown[selItem] ?? shown[0];
   const si = styleFor(selItem);
   const style = item.styles[si];
   const ci = colourFor(selItem, si);
   const colour = style.colours[ci];
 
+  // Saving the focused individual piece.
+  const itemEntry: SavedEntry = {
+    key: `item:${world}:${style.name}`,
+    kind: 'item',
+    title: style.name,
+    subtitle: style.price,
+    color: colour.sw,
+  };
+  const itemSaved = isSaved(itemEntry.key);
+
   const setStyle = (i: number) =>
     setStyleIdx((prev) => ({ ...prev, [selItem]: (i + item.styles.length) % item.styles.length }));
-  const cycleStyle = (dir: number) => setStyle(si + dir);
   const setColour = (i: number) =>
     setColourIdx((prev) => ({ ...prev, [ckey(selItem, si)]: i }));
 
   const bundleTotal = useMemo(
-    () => ITEMS.reduce((sum, m, i) => sum + parsePrice(m.styles[styleFor(i)].price), 0),
-    [styleIdx],
+    () => shown.reduce((sum, m, i) => sum + parsePrice(m.styles[styleFor(i)].price), 0),
+    [shown, styleIdx],
   );
+
+  // Applying refine resets the focused piece + its per-piece style/colour state,
+  // since the visible set (and thus indices) changes.
+  const applyRefine = (cx: RefineConstraints) => {
+    setConstraints(cx);
+    setSelItem(0);
+    setStyleIdx({});
+    setColourIdx({});
+  };
 
   const flash = (
     set: (v: boolean) => void,
@@ -68,32 +123,37 @@ export function BreakdownPanel({ width }: { width: number }) {
     timer.current = setTimeout(() => set(false), FLASH_MS);
   };
 
-  // Swipe the style image to cycle styles (claims horizontal gestures so the
-  // parent pager doesn't steal them). No live drag — the design swaps on release.
-  // Re-created per selection so the release handler cycles the current item.
-  const swipe = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 8,
-        onPanResponderRelease: (_e, g) => {
-          if (g.dx < -40) cycleStyle(1);
-          else if (g.dx > 40) cycleStyle(-1);
-        },
-      }),
+  // The chosen item's styles are a native horizontal pager: swipe the image to
+  // move through the styles (image + specs update together); dots mirror the page
+  // and jump to it. pageW is the detail's inner width (padding 16 each side).
+  const pageW = width - 32;
+  const styleScrollRef = useRef<ScrollView>(null);
+
+  // Realign the pager to the selected style whenever the item changes.
+  useEffect(() => {
+    styleScrollRef.current?.scrollTo({ x: si * pageW, animated: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selItem, si],
-  );
+  }, [selItem, pageW]);
+
+  const goStyle = (i: number) => {
+    setStyle(i);
+    styleScrollRef.current?.scrollTo({ x: i * pageW, animated: true });
+  };
+  const onStyleScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const page = Math.round(e.nativeEvent.contentOffset.x / pageW);
+    if (page !== si) setStyle(page);
+  };
 
   return (
     <ScrollView
       style={[styles.panel, { width, backgroundColor: c.bg }]}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
     >
       {/* ── Collage: item chips + palette + add all ── */}
       <View style={[styles.collage, { backgroundColor: c.tint }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-          {ITEMS.map((m, i) => {
+          {shown.map((m, i) => {
             const on = i === selItem;
             return (
               <Pressable key={m.label} onPress={() => setSelItem(i)} style={styles.chip}>
@@ -122,7 +182,7 @@ export function BreakdownPanel({ width }: { width: number }) {
         <View style={styles.paletteRow}>
           <Text style={[styles.eyebrow, { color: c.ink }]}>PALETTE</Text>
           <View style={styles.swatches}>
-            {PALETTE.map((sw) => (
+            {palette.map((sw) => (
               <View key={sw} style={[styles.paletteSw, { backgroundColor: sw }]} />
             ))}
           </View>
@@ -147,15 +207,40 @@ export function BreakdownPanel({ width }: { width: number }) {
 
       {/* ── Chosen item ── */}
       <View style={styles.detail}>
-        <View {...swipe.panHandlers} style={[styles.styleImg, { backgroundColor: c.hairline }]}>
-          <Text style={[styles.slotLabel, { color: c.ink }]}>{item.label}</Text>
+        <View style={styles.imageWrap}>
+          <ScrollView
+            ref={styleScrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={onStyleScrollEnd}
+            style={{ width: pageW }}
+          >
+            {item.styles.map((s) => (
+              <View
+                key={s.img}
+                style={[styles.styleImg, { width: pageW, backgroundColor: c.hairline }]}
+              >
+                <Text style={[styles.slotLabel, { color: c.ink }]}>{s.name}</Text>
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Save this piece — floats just below the image's bottom-right. */}
+          <Pressable
+            onPress={() => setSaveOpen(true)}
+            hitSlop={8}
+            style={[styles.saveBtn, { backgroundColor: c.bg, borderColor: c.hairline }]}
+          >
+            <Heart size={22} weight={itemSaved ? 'fill' : 'regular'} color={itemSaved ? c.soul : c.ink} />
+          </Pressable>
         </View>
 
         <View style={styles.styleDots}>
           {item.styles.map((s, i) => (
             <Pressable
               key={s.img}
-              onPress={() => setStyle(i)}
+              onPress={() => goStyle(i)}
               hitSlop={6}
               style={[
                 styles.dot,
@@ -209,15 +294,32 @@ export function BreakdownPanel({ width }: { width: number }) {
         </Pressable>
       </View>
 
-      {/* ── Refine with AI (static) ── */}
+      {/* ── Refine with AI — opens the measurable filter sheet ── */}
       <View style={styles.aiWrap}>
-        <View style={[styles.aiPill, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+        <Pressable
+          onPress={() => setRefineOpen(true)}
+          style={[styles.aiPill, { backgroundColor: c.surface, borderColor: c.hairline }]}
+        >
           <Sparkle size={20} weight="fill" color={c.soul} />
-          <Text style={[styles.aiText, { color: c.ink }]} numberOfLines={1}>
-            Refine with AI — ask for a closer match…
+          <Text
+            style={[styles.aiText, { color: c.ink, opacity: refined ? 1 : 0.55 }]}
+            numberOfLines={1}
+          >
+            {refined ? 'Adjust refinements' : 'Refine with AI — size, price & specifics'}
           </Text>
-        </View>
+        </Pressable>
       </View>
+
+      <RefineSheet
+        visible={refineOpen}
+        onClose={() => setRefineOpen(false)}
+        domain={domain}
+        items={items}
+        initial={constraints}
+        onApply={applyRefine}
+      />
+
+      <SaveSheet visible={saveOpen} onClose={() => setSaveOpen(false)} entry={itemEntry} />
     </ScrollView>
   );
 }
@@ -261,12 +363,31 @@ const styles = StyleSheet.create({
   divider: { height: 1 },
 
   detail: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 22 },
+  imageWrap: {
+    // Wraps the style pager so the save button can hang off its bottom-right.
+    alignSelf: 'stretch',
+  },
   styleImg: {
-    width: '100%',
     height: 236,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  saveBtn: {
+    position: 'absolute',
+    right: 10,
+    bottom: -14, // sits just below the image's bottom-right corner
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   styleDots: {
     marginTop: 12,
@@ -315,5 +436,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  aiText: { flex: 1, fontFamily: font.regular, fontSize: 14, opacity: 0.55 },
+  aiText: { flex: 1, fontFamily: font.regular, fontSize: 14, padding: 0 },
 });

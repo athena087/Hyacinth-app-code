@@ -9,6 +9,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { CartProvider } from '../cart/CartContext';
+import { SavedProvider } from '../saved/SavedContext';
 
 // Keep the splash up until Lilex is ready so text never flashes in a system
 // font first. Called at module scope so it runs before the tree mounts.
@@ -33,9 +34,11 @@ export default function RootLayout() {
 
   return (
     <CartProvider>
-      {/* headerShown off — screens render their own headers. */}
-      <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar style="auto" />
+      <SavedProvider>
+        {/* headerShown off — screens render their own headers. */}
+        <Stack screenOptions={{ headerShown: false }} />
+        <StatusBar style="auto" />
+      </SavedProvider>
     </CartProvider>
   );
 }

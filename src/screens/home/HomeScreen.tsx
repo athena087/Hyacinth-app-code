@@ -23,7 +23,8 @@ export default function HomeScreen() {
   const [data, setData] = useState<World[]>(() => source.next(INITIAL_BATCH));
 
   // Swiping a world left opens the (static) View Item screen, as on results.
-  const openItem = () => router.push('/item');
+  const openItem = (label: string) =>
+    router.push({ pathname: '/item', params: { world: label } });
 
   // Instant append — no spinner/delay: pull the next batch when nearing the end.
   const loadMore = useCallback(() => {

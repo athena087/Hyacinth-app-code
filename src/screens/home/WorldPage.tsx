@@ -20,14 +20,18 @@ export function WorldPage({
 }: {
   world: World;
   height: number;
-  onOpen: () => void;
+  onOpen: (label: string) => void;
 }) {
   const c = useTokens();
   const insets = useSafeAreaInsets();
 
   return (
     <View style={{ height, backgroundColor: c.bg }}>
-      <SwipeLeft onSwipe={onOpen} move={false} style={[styles.hero, { backgroundColor: c.hairline }]}>
+      <SwipeLeft
+        onSwipe={() => onOpen(world.heroLabel)}
+        move={false}
+        style={[styles.hero, { backgroundColor: c.hairline }]}
+      >
         <Text
           style={[styles.heroLabel, { color: c.ink, opacity: textOpacity.secondary }]}
           numberOfLines={2}
